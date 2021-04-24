@@ -4,6 +4,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include <iostream>
+#include <vector>
+#include <string>
 #include <time.h>
 
 using namespace cv;
@@ -11,7 +13,7 @@ using namespace std;
 
 constexpr double FONT_SIZE = 0.3;
 
-void display(Mat& im, Mat& bbox)
+void display(Mat& im, Mat& bbox, vector<string> data)
 {
 	int n = bbox.rows;
 	for (int i = 0; i < n; i++)
@@ -19,6 +21,9 @@ void display(Mat& im, Mat& bbox)
 		rectangle(im, Point_<float>(bbox.at<float>(i, 0), bbox.at<float>(i, 1)),
 			Point_<float>(bbox.at<float>(i, 4), bbox.at<float>(i, 5)),
 			Scalar(255, 0, 0), 3);
+
+		putText(im, data[i], Point_<float>(bbox.at<float>(i, 0), bbox.at<float>(i, 1) - 10), 
+			FONT_HERSHEY_SIMPLEX, FONT_SIZE, Scalar(255, 0, 0));
 	}
 }
 
@@ -66,13 +71,15 @@ int main(int argc, char* argv[]) {
 			frameCounter = 0;
 		}
 
-		Mat bbox;
+		Mat bbox; 
+		vector<string> data;
 
-		std::string data = qrDecoder.detectAndDecode(frame, bbox);
-		if (data.length() > 0)
+		qrDecoder.detectAndDecodeMulti(frame, data, bbox);
+		if (!data.empty())
 		{
-			cout << "Decoded data: " << data << endl;
-			display(frame, bbox);
+			for (string text: data)
+				cout << "Decoded data: " << text << endl;
+			display(frame, bbox, data);
 		}
 
 		putText(frame, format("Average FPS=%d", fps), Point(10, 10), FONT_HERSHEY_SIMPLEX, FONT_SIZE, Scalar(100, 255, 0));
