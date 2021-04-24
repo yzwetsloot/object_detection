@@ -1,48 +1,61 @@
-#include <opencv2/objdetect.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <time.h>
 
 using namespace cv;
 using namespace std;
 
-void display(Mat& im, Mat& bbox)
-{
-	int n = bbox.rows;
-	for(int i = 0; i < n; i++)
-	{
-		line(im, Point2i(bbox.at<float>(i, 0), bbox.at<float>(i, 1)),
-			Point2i(bbox.at<float>((i + 1) % n, 0), bbox.at<float>((i + 1) % n, 1)),
-			Scalar(255, 0, 0), 3);
-	}
-	imshow("Result", im);
-}
-
 int main(int argc, char* argv[]) {
 	cout << "Start object detection source\n";
 
-	Mat inputImage;
-	if (argc > 1)
-		inputImage = imread(argv[1]);
-	else
-		inputImage = imread("qrcode-feature.jpg");
+	Mat frame;
 
-	QRCodeDetector qrDecoder = QRCodeDetector::QRCodeDetector();
+	VideoCapture cap;
 
-	Mat bbox, rectifiedImage;
+	int deviceID = 0;
+	int apiID = CAP_ANY;
+	cap.open(deviceID, apiID);
 
-	std::string data = qrDecoder.detectAndDecode(inputImage, bbox, rectifiedImage);
-	if (data.length() > 0)
-	{
-		cout << "Decoded Data: " << data << endl;
-
-		display(inputImage, bbox);
-		rectifiedImage.convertTo(rectifiedImage, CV_8UC3);
-		imshow("Rectified QRCode", rectifiedImage);
-
-		waitKey(0);
+	if (!cap.isOpened()) {
+		cerr << "Unable to open camera\n";
+		return -1;
 	}
-	else
-		cout << "QR Code not detected\n";
+
+	cout << "Start grabbing frames\n";
+	cout << "Press any key to terminate\n";
+
+	int frameCounter = 0;
+	int tick = 0;
+	int fps = 0;
+	time_t timeBegin = time(0);
+
+	for (;;)
+	{
+		cap.read(frame);
+		if (frame.empty()) {
+			cerr << "Blank frame grabbed\n";
+			break;
+		}
+
+		frameCounter++;
+		time_t timeNow = time(0) - timeBegin;
+
+		if (timeNow - tick >= 1)
+		{
+			tick++;
+			fps = frameCounter;
+			frameCounter = 0;
+		}
+
+		putText(frame, format("Average FPS=%d", fps), Point(30, 30), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 0, 255));
+
+		imshow("Live", frame);
+		if (waitKey(5) >= 0)
+			break;
+	}
+
+	return 0;
 }
