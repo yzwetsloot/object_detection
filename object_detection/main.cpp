@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 #include <time.h>
+#include <cstdlib>
+#include "ZBarDetector.h"
 
 using namespace cv;
 using namespace std;
@@ -52,6 +54,7 @@ int main(int argc, char* argv[]) {
 	time_t timeBegin = time(0);
 
 	QRCodeDetector qrDecoder = QRCodeDetector::QRCodeDetector();
+	ZBarDetector zbarDetector = ZBarDetector::ZBarDetector();
 
 	for (;;)
 	{
@@ -74,7 +77,8 @@ int main(int argc, char* argv[]) {
 		Mat bbox; 
 		vector<string> data;
 
-		qrDecoder.detectAndDecodeMulti(frame, data, bbox);
+		//qrDecoder.detectAndDecodeMulti(frame, data, bbox);
+		zbarDetector.detectAndDecodeMulti(frame, data, bbox);
 		if (!data.empty())
 		{
 			for (string text: data)
@@ -92,5 +96,5 @@ int main(int argc, char* argv[]) {
 
 	destroyAllWindows();
 
-	return 0;
+	return EXIT_SUCCESS;
 }
