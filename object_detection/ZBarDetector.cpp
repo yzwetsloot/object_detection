@@ -30,8 +30,8 @@ void ZBarDetector::detectAndDecodeMulti(Mat& im, vector<string>& data, Mat& bbox
 		float points[8];
 		for (int i = 0; i < symbol->get_location_size(); i++)
 		{
-			points[i * 2] = symbol->get_location_x(i);
-			points[i * 2 + 1] = symbol->get_location_y(i);
+			points[i * 2] = static_cast<float>(symbol->get_location_x(i));
+			points[i * 2 + 1] = static_cast<float>(symbol->get_location_y(i));
 		}
 
 		Mat row = Mat(1, 8, CV_32F, points);

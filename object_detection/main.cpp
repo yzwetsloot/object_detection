@@ -3,6 +3,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
+#include <cxxopts.hpp>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -31,6 +32,14 @@ void display(Mat& im, Mat& bbox, vector<string> data)
 
 int main(int argc, char* argv[]) {
 	cout << "Start object detection source\n";
+
+	cxxopts::Options options("test", "A brief description");
+
+	options.add_options()
+		("p,parser", "QR Code parser", cxxopts::value<string>()->default_value("opencv"))
+		;
+
+	auto result = options.parse(argc, argv);
 
 	Mat frame;
 

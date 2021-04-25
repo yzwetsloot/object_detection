@@ -130,7 +130,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\ZBar\include;C:\opencv-4.5.2\build\install\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\cxxopts-master\include;C:\Program Files %28x86%29\ZBar\include;C:\opencv-4.5.2\build\install\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
