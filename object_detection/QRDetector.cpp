@@ -1,11 +1,11 @@
-#include <iostream>
 #include <string>
 #include <vector>
-#include <zbar.h>
 #include <opencv2/opencv.hpp>
-#include "ZBarDetector.h"
+#include <zbar.h>
+#include "QRDetector.h"
 
 using namespace std;
+using namespace cv;
 using namespace zbar;
 
 void ZBarDetector::detectAndDecodeMulti(Mat& im, vector<string>& data, Mat& bbox)
@@ -39,26 +39,18 @@ void ZBarDetector::detectAndDecodeMulti(Mat& im, vector<string>& data, Mat& bbox
 	}
 }
 
-void ZBarDetector::display(Mat& im, vector<decodedObject>& decodedObjects)
+string ZBarDetector::getName()
 {
-	for (int i = 0; i < decodedObjects.size(); i++)
-	{
-		vector<Point> points = decodedObjects[i].location;
-		vector<Point> hull;
+	return name;
+}
 
-		if (points.size() > 4)
-			convexHull(points, hull);
-		else
-			hull = points;
+void OpenCVDetector::detectAndDecodeMulti(Mat& im, vector<string>& data, Mat& bbox)
+{
+	QRCodeDetector detector = QRCodeDetector::QRCodeDetector();
+	detector.detectAndDecodeMulti(im, data, bbox);
+}
 
-		int n = hull.size();
-
-		for (int j = 0; j < n; j++)
-		{
-			line(im, hull[j], hull[(j + 1) % n], Scalar(255, 0, 0), 3);
-		}
-	}
-
-	imshow("Results", im);
-	waitKey(0);
+string OpenCVDetector::getName()
+{
+	return name;
 }

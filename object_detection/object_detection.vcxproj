@@ -130,7 +130,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\cxxopts-master\include;C:\Program Files %28x86%29\ZBar\include;C:\opencv-4.5.2\build\install\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\ZBar\include;C:\opencv-4.5.2\build\install\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,10 +143,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="ZBarDetector.cpp" />
+    <ClCompile Include="QRDetector.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ZBarDetector.h" />
+    <ClInclude Include="QRDetector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,12 +18,12 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ZBarDetector.cpp">
+    <ClCompile Include="QRDetector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ZBarDetector.h">
+    <ClInclude Include="QRDetector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
