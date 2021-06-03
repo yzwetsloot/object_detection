@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <chrono>
 #include <time.h>
 #include <cstdlib>
 #include <stdio.h>
@@ -18,11 +19,30 @@ string keys =
 "{ help h      |       | Print help message. }"
 "{ debug d     | false | Includes window with marked targets if true. }"
 "{ camera c    | 0     | Camera device number. }"
+"{ duration    | 3600  | Maximum program duration in seconds before program exit. }"
+"{ targets     |       | Target data to be matched against QR-decoded text. Separate individual strings by a comma. }"
 "{ detector    | 0     | Choose one of QR detector & decoder libaries: "
 "0: ZBar (by default), "
 "1: OpenCV }";
 
 constexpr double FONT_SIZE = 0.3;
+
+vector<string> parseTargetNames(string targets, char delimiter=',')
+{
+	vector<string> targetNames;
+
+	size_t pos = 0;
+	string token;
+	while ((pos = targets.find(delimiter)) != string::npos) {
+		token = targets.substr(0, pos);
+		targetNames.push_back(token);
+		targets.erase(0, pos + 1);
+	}
+
+	targetNames.push_back(targets);
+
+	return targetNames;
+}
 
 void display(Mat& im, Mat& bbox, vector<string> data)
 {
@@ -62,6 +82,17 @@ int main(int argc, char* argv[])
 	const bool DEBUG = parser.get<bool>("debug");
 	cout << DEBUG << endl;
 
+	const int MAX_DURATION = parser.get<int>("duration");
+
+	const string targets = parser.get<string>("targets");
+	const vector<string> targetNames = parseTargetNames(targets);
+	
+	cout << "Found " << targetNames.size() << " targets: ";
+	for (auto targetName : targetNames) {
+		cout << targetName << ' ';
+	}
+	cout << endl;
+
 	cout << "Start object detection\n";
 
 	Mat frame;
@@ -89,8 +120,19 @@ int main(int argc, char* argv[])
 
 	QRDetector* detector = getDetector(parser.get<int>("detector"));
 
+	auto maxDuration = chrono::seconds(MAX_DURATION);
+
+	chrono::time_point<chrono::system_clock> endTime;
+	endTime = chrono::system_clock::now() + maxDuration;
+
 	for (;;)
 	{
+		// if max duration has passed, exit from loop
+		if (chrono::system_clock::now() >= endTime) {
+			cout << "Maximum duration has passed. Exiting program..." << endl;
+			break;
+		}
+
 		cap.read(frame);
 		if (frame.empty()) {
 			cerr << "Blank frame grabbed\n";
