@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 
 	const string targets = parser.get<string>("targets");
 	const vector<string> targetNames = parseTargetNames(targets);
-	
+
 	cout << "Found " << targetNames.size() << " targets: ";
 	for (auto targetName : targetNames) {
 		cout << targetName << ' ';
