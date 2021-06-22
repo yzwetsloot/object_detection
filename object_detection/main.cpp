@@ -1,3 +1,5 @@
+#pragma warning(disable : 4996)
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -11,6 +13,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include "QRDetector.h"
+#include <iomanip>
 
 using namespace cv;
 using namespace std;
@@ -68,10 +71,26 @@ QRDetector* getDetector(int id)
 		return new ZBarDetector();
 }
 
+ string getCurrentTimeString()
+{
+	using namespace std::chrono;
+	auto t = system_clock::now();
+	auto ms = duration_cast<milliseconds>(t.time_since_epoch()) % 1000;
+	auto timer = system_clock::to_time_t(t);
+	auto tm = *localtime(&timer);
+
+	ostringstream oss;
+
+	oss << put_time(&tm, "%H:%M:%S");
+	oss << '.' << setfill('0') << setw(3) << ms.count();
+
+	return oss.str();
+}
+
 int main(int argc, char* argv[]) 
 {
 	CommandLineParser parser(argc, argv, keys);
-	parser.about("Lunar Zebro navigation - QR Code detection v1.0.0");
+	parser.about("Lunar Zebro navigation - QR Code detection v1.0.0\nAuthor: Y. Zwetsloot\n");
 
 	if (parser.has("help"))
 	{
@@ -79,8 +98,11 @@ int main(int argc, char* argv[])
 		return EXIT_SUCCESS;
 	}
 
+	cout << "Lunar Zebro navigation - QR Code detection v1.0.0\nAuthor: Y. Zwetsloot\n" << endl;
+
 	const bool DEBUG = parser.get<bool>("debug");
-	cout << DEBUG << endl;
+	if (DEBUG) cout << "Running in debug mode" << endl;
+	else cout << "Running in production mode" << endl;
 
 	const int MAX_DURATION = parser.get<int>("duration");
 
@@ -92,8 +114,6 @@ int main(int argc, char* argv[])
 		cout << targetName << ' ';
 	}
 	cout << endl;
-
-	cout << "Start object detection\n";
 
 	Mat frame;
 
@@ -109,8 +129,8 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	cout << "Start grabbing frames\n";
-	cout << "Press any key to terminate\n";
+	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << endl << endl;
+	if (DEBUG) cout << "\nPress any key to terminate\n";
 
 	// initialize variables for average FPS calculation
 	int frameCounter = 0;
@@ -139,15 +159,17 @@ int main(int argc, char* argv[])
 			break;
 		}
 
-		// calculate average FPS for camera video
-		frameCounter++;
-		time_t timeNow = time(0) - timeBegin;
+		if (DEBUG) {
+			// calculate average FPS for camera video
+			frameCounter++;
+			time_t timeNow = time(0) - timeBegin;
 
-		if (timeNow - tick >= 1)
-		{
-			tick++;
-			fps = frameCounter;
-			frameCounter = 0;
+			if (timeNow - tick >= 1)
+			{
+				tick++;
+				fps = frameCounter;
+				frameCounter = 0;
+			}
 		}
 
 		Mat bbox; 
@@ -155,8 +177,12 @@ int main(int argc, char* argv[])
 
 		detector->detectAndDecodeMulti(frame, data, bbox);
 		if (!data.empty()) {
-			for (string text : data)
+
+			// TODO: determine need for timestamp and printing
+			for (string text : data) {
+				cout << getCurrentTimeString() << " - ";
 				printf("[%s] Decoded data: %s\n", detector->getName().c_str(), text.c_str());
+			}
 		}
 
 		if (DEBUG) {
