@@ -88,6 +88,15 @@ QRDetector* getDetector(int id)
 	return oss.str();
 }
 
+ bool checkTargetName(set<string>& targetNames, string text) {
+	 if (targetNames.find(text) != targetNames.end()) {
+		 targetNames.erase(text);
+		 cout << "Decoded value corresponds to one of the targets" << endl;
+		 return true;
+	 }
+	 return false;
+ }
+
 int main(int argc, char* argv[]) 
 {
 	CommandLineParser parser(argc, argv, keys);
@@ -108,7 +117,7 @@ int main(int argc, char* argv[])
 	const int MAX_DURATION = parser.get<int>("duration");
 
 	const string targets = parser.get<string>("targets");
-	const set<string> targetNames = parseTargetNames(targets);
+	set<string> targetNames = parseTargetNames(targets);
 
 	cout << "Found " << targetNames.size() << " targets: ";
 	for (auto targetName : targetNames) {
@@ -183,15 +192,11 @@ int main(int argc, char* argv[])
 			for (string text : data) {
 				cout << getCurrentTimeString() << " - ";
 				printf("[%s] Decoded data: %s\n", detector->getName().c_str(), text.c_str());
+				checkTargetName(targetNames, text);
 
-				if (targetNames.find(text) != targetNames.end()) {
-					targetNames.erase(text);
-					cout << "Decoded value corresponds to one of the targets" << endl;
-
-					if (targetNames.empty()) {
-						cout << "All targets found. Exiting program..." << endl;
-						goto endLoop;
-					}
+				if (targetNames.empty()) {
+					cout << "\nAll targets found. Exiting program..." << endl;
+					goto endLoop;
 				}
 			}
 		}
