@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <string>
 #include <chrono>
 #include <time.h>
@@ -30,19 +31,19 @@ string keys =
 
 constexpr double FONT_SIZE = 0.3;
 
-vector<string> parseTargetNames(string targets, char delimiter=',')
+set<string> parseTargetNames(string targets, char delimiter=',')
 {
-	vector<string> targetNames;
+	set<string> targetNames;
 
 	size_t pos = 0;
 	string token;
 	while ((pos = targets.find(delimiter)) != string::npos) {
 		token = targets.substr(0, pos);
-		targetNames.push_back(token);
+		targetNames.insert(token);
 		targets.erase(0, pos + 1);
 	}
 
-	targetNames.push_back(targets);
+	targetNames.insert(targets);
 
 	return targetNames;
 }
@@ -107,7 +108,7 @@ int main(int argc, char* argv[])
 	const int MAX_DURATION = parser.get<int>("duration");
 
 	const string targets = parser.get<string>("targets");
-	const vector<string> targetNames = parseTargetNames(targets);
+	const set<string> targetNames = parseTargetNames(targets);
 
 	cout << "Found " << targetNames.size() << " targets: ";
 	for (auto targetName : targetNames) {
@@ -182,6 +183,16 @@ int main(int argc, char* argv[])
 			for (string text : data) {
 				cout << getCurrentTimeString() << " - ";
 				printf("[%s] Decoded data: %s\n", detector->getName().c_str(), text.c_str());
+
+				if (targetNames.find(text) != targetNames.end()) {
+					targetNames.erase(text);
+					cout << "Decoded value corresponds to one of the targets" << endl;
+
+					if (targetNames.empty()) {
+						cout << "All targets found. Exiting program..." << endl;
+						goto endLoop;
+					}
+				}
 			}
 		}
 
@@ -203,6 +214,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
+endLoop:
 	if (DEBUG) destroyAllWindows();
 
 	return EXIT_SUCCESS;
