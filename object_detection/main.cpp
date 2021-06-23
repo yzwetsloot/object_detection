@@ -26,7 +26,7 @@ string keys =
 "{ camera c    | 0     | Camera device number. }"
 "{ duration    | 3600  | Maximum program duration in seconds before program exit. }"
 "{ targets     |       | Target data to be matched against QR-decoded text. Separate individual strings by a comma. }"
-"{ width	   | 1920  | Width component camera video resolution. }"
+"{ width       | 1920  | Width component camera video resolution. }"
 "{ height      | 1080  | Height component camera video resolution. }"
 "{ detector    | 0     | Choose one of QR detector & decoder libaries: "
 "0: ZBar (by default), "
