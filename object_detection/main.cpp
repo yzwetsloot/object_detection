@@ -1,5 +1,6 @@
 #pragma warning(disable : 4996)
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <set>
@@ -30,6 +31,7 @@ string keys =
 "1: OpenCV }";
 
 constexpr double FONT_SIZE = 0.3;
+constexpr int MAX_COLOR_VALUE = 255;
 
 set<string> parseTargetNames(string targets, char delimiter=',')
 {
@@ -88,13 +90,75 @@ QRDetector* getDetector(int id)
 	return oss.str();
 }
 
- bool checkTargetName(set<string>& targetNames, string text) {
+ bool checkTargetName(set<string>& targetNames, string text)
+ {
 	 if (targetNames.find(text) != targetNames.end()) {
 		 targetNames.erase(text);
 		 cout << "Decoded value corresponds to one of the targets" << endl;
 		 return true;
 	 }
 	 return false;
+ }
+
+ Mat applyGrayscale(Mat& mat, const Scalar& low, const Scalar& high)
+ {
+	 // colored object detection
+	 Mat element = getStructuringElement(MORPH_RECT, Size(5, 5)); // TODO: determine why?
+	 Mat isolation;
+
+	 inRange(mat, low, high, isolation);
+	 bitwise_not(isolation, isolation);
+
+	 erode(isolation, isolation, Mat());
+	 dilate(isolation, isolation, element);
+
+	 return isolation;
+ }
+
+ struct contour {
+	 double area;
+	 size_t index;
+ };
+
+ bool sortContour(contour c1, contour c2)
+ {
+	 return c1.area < c2.area;
+ }
+
+ Mat applyContours(Mat& mat)
+ {
+	 threshold(mat, mat, 128, 255, THRESH_BINARY); // TODO: determine why these values?
+
+	 vector<vector<Point>> contours;
+	 findContours(mat, contours, RETR_LIST, CHAIN_APPROX_SIMPLE); // TODO: use CHAIN_APPROX_NONE?
+
+	 Mat contourImage(mat.size(), CV_8UC3, Scalar(0, 0, 0));
+	 Scalar colors[3];
+	 colors[0] = Scalar(255, 0, 0);
+	 colors[1] = Scalar(0, 255, 0);
+	 colors[2] = Scalar(0, 0, 255);
+
+	 vector<contour> contourAreas;
+
+	 if (contours.size() > 1) {
+		 for (size_t idx = 0; idx < contours.size(); idx++) {
+			 contourAreas.push_back(contour{ contourArea(contours[idx]), idx });
+		 }
+
+		 sort(contourAreas.begin(), contourAreas.end(), sortContour);
+	 }
+	 else if (contours.size() <= 1) return contourImage; // if single element or empty, there cannot be a second largest contour
+
+	 int idxSecondBiggest = contourAreas[contourAreas.size() - 2].index; // get second largest
+
+	 auto mu = moments(contours[idxSecondBiggest]);
+	 auto mc = Point2f(static_cast<float>(mu.m10 / (mu.m00 + 1e-5)),
+		 static_cast<float>(mu.m01 / (mu.m00 + 1e-5)));
+
+	 drawContours(contourImage, contours, idxSecondBiggest, colors[idxSecondBiggest % 3]);
+	 circle(contourImage, mc, 4, colors[idxSecondBiggest % 3], -1);
+
+	 return contourImage;
  }
 
 int main(int argc, char* argv[]) 
@@ -119,7 +183,12 @@ int main(int argc, char* argv[])
 	const string targets = parser.get<string>("targets");
 	set<string> targetNames = parseTargetNames(targets);
 
-	cout << "Found " << targetNames.size() << " targets: ";
+	if (!targetNames.size()) {
+		cerr << "Unable to read in targets\n";
+		return EXIT_FAILURE;
+	}
+
+	cout << "Found " << targetNames.size() << " target(s): ";
 	for (auto targetName : targetNames) {
 		cout << targetName << ' ';
 	}
@@ -140,7 +209,7 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << endl << endl;
-	if (DEBUG) cout << "\nPress any key to terminate\n";
+	if (DEBUG) cout << "Press any key to terminate\n" << endl;
 
 	// initialize variables for average FPS calculation
 	int frameCounter = 0;
@@ -155,6 +224,10 @@ int main(int argc, char* argv[])
 	chrono::time_point<chrono::system_clock> endTime;
 	endTime = chrono::system_clock::now() + maxDuration;
 
+	// define color range parameters
+	int rh = 255, rl = 100, gh = 255, gl = 0, bh = 70, bl = 0;
+	const string targetWindowName = "Target";
+
 	for (;;)
 	{
 		// if max duration has passed, exit from loop
@@ -168,6 +241,14 @@ int main(int argc, char* argv[])
 			cerr << "Blank frame grabbed\n";
 			break;
 		}
+
+		// apply grayscale
+		Mat grayscaleImage = applyGrayscale(frame, Scalar(bl, gl, rl), Scalar(bh, gh, rh));
+		imshow("Flag", grayscaleImage);
+
+		// apply contours
+		Mat contourImage = applyContours(grayscaleImage);
+		imshow("Flag annotated", contourImage);
 
 		if (DEBUG) {
 			// calculate average FPS for camera video
@@ -211,8 +292,16 @@ int main(int argc, char* argv[])
 			putText(frame, format("Average FPS=%d", fps), Point(10, 10), FONT_HERSHEY_SIMPLEX, FONT_SIZE, Scalar(100, 255, 0));
 
 			// show image frame and wait for key press
-			namedWindow("Live", WINDOW_NORMAL);
-			imshow("Live", frame);
+			namedWindow(targetWindowName, WINDOW_NORMAL);
+
+			createTrackbar("rh", targetWindowName, &rh, MAX_COLOR_VALUE);
+			createTrackbar("rl", targetWindowName, &rl, MAX_COLOR_VALUE);
+			createTrackbar("gh", targetWindowName, &gh, MAX_COLOR_VALUE);
+			createTrackbar("gl", targetWindowName, &gl, MAX_COLOR_VALUE);
+			createTrackbar("bh", targetWindowName, &bh, MAX_COLOR_VALUE);
+			createTrackbar("bl", targetWindowName, &bl, MAX_COLOR_VALUE);
+
+			imshow(targetWindowName, frame);
 
 			if (waitKey(5) >= 0)
 				break;
