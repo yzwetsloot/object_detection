@@ -26,6 +26,8 @@ string keys =
 "{ camera c    | 0     | Camera device number. }"
 "{ duration    | 3600  | Maximum program duration in seconds before program exit. }"
 "{ targets     |       | Target data to be matched against QR-decoded text. Separate individual strings by a comma. }"
+"{ width	   | 1920  | Width component camera video resolution. }"
+"{ height      | 1080  | Height component camera video resolution. }"
 "{ detector    | 0     | Choose one of QR detector & decoder libaries: "
 "0: ZBar (by default), "
 "1: OpenCV }";
@@ -33,21 +35,27 @@ string keys =
 constexpr double FONT_SIZE = 0.3;
 constexpr int MAX_COLOR_VALUE = 255;
 
-set<string> parseTargetNames(string targets, char delimiter=',')
+vector<string> parseStringArgument(string targets, char delimiter=',')
 {
-	set<string> targetNames;
+	vector<string> stringArguments;
 
 	size_t pos = 0;
 	string token;
 	while ((pos = targets.find(delimiter)) != string::npos) {
 		token = targets.substr(0, pos);
-		targetNames.insert(token);
+		stringArguments.push_back(token);
 		targets.erase(0, pos + 1);
 	}
 
-	targetNames.insert(targets);
+	stringArguments.push_back(targets);
 
-	return targetNames;
+	return stringArguments;
+}
+
+set<string> convertVectorToSet(vector<string> elements)
+{
+	set<string> uniqueElements(elements.begin(), elements.end());
+	return uniqueElements;
 }
 
 void display(Mat& im, Mat& bbox, vector<string> data)
@@ -125,18 +133,12 @@ QRDetector* getDetector(int id)
 	 return c1.area < c2.area;
  }
 
- Mat applyContours(Mat& mat)
+ vector<Point> getContour(Mat& mat)
  {
 	 threshold(mat, mat, 128, 255, THRESH_BINARY); // TODO: determine why these values?
 
 	 vector<vector<Point>> contours;
 	 findContours(mat, contours, RETR_LIST, CHAIN_APPROX_SIMPLE); // TODO: use CHAIN_APPROX_NONE?
-
-	 Mat contourImage(mat.size(), CV_8UC3, Scalar(0, 0, 0));
-	 Scalar colors[3];
-	 colors[0] = Scalar(255, 0, 0);
-	 colors[1] = Scalar(0, 255, 0);
-	 colors[2] = Scalar(0, 0, 255);
 
 	 vector<contour> contourAreas;
 
@@ -147,18 +149,27 @@ QRDetector* getDetector(int id)
 
 		 sort(contourAreas.begin(), contourAreas.end(), sortContour);
 	 }
-	 else if (contours.size() <= 1) return contourImage; // if single element or empty, there cannot be a second largest contour
+	 else if (contours.size() <= 1) return vector<Point>{}; // if single element or empty, there cannot be a second largest contour
 
-	 int idxSecondBiggest = contourAreas[contourAreas.size() - 2].index; // get second largest
+	 size_t idxSecondBiggest = contourAreas[contourAreas.size() - 2].index; // get second largest
+	 return contours[idxSecondBiggest];
+ }
 
-	 auto mu = moments(contours[idxSecondBiggest]);
+ Point2f getContourCenter(vector<Point> contour)
+ {
+	 auto mu = moments(contour);
 	 auto mc = Point2f(static_cast<float>(mu.m10 / (mu.m00 + 1e-5)),
-		 static_cast<float>(mu.m01 / (mu.m00 + 1e-5)));
+		static_cast<float>(mu.m01 / (mu.m00 + 1e-5)));
 
-	 drawContours(contourImage, contours, idxSecondBiggest, colors[idxSecondBiggest % 3]);
-	 circle(contourImage, mc, 4, colors[idxSecondBiggest % 3], -1);
+	 return mc;
+ }
 
-	 return contourImage;
+ void applyContourVisual(Mat& mat, vector<Point> contour, Point2f center)
+ {
+	 vector<vector<Point>> contours;
+	 contours.push_back(contour);
+	 drawContours(mat, contours, -1, Scalar(255,0,0));
+	 circle(mat, center, 4, Scalar(255,0,0), -1);
  }
 
 int main(int argc, char* argv[]) 
@@ -181,7 +192,7 @@ int main(int argc, char* argv[])
 	const int MAX_DURATION = parser.get<int>("duration");
 
 	const string targets = parser.get<string>("targets");
-	set<string> targetNames = parseTargetNames(targets);
+	set<string> targetNames = convertVectorToSet(parseStringArgument(targets));
 
 	if (!targetNames.size()) {
 		cerr << "Unable to read in targets\n";
@@ -208,7 +219,15 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << endl << endl;
+	const int fw = parser.get<int>("width");
+	const int fh = parser.get<int>("height");
+
+	cap.set(CAP_PROP_FRAME_WIDTH, fw);
+	cap.set(CAP_PROP_FRAME_HEIGHT, fh);
+
+	const double middleCoordinateWidth = cap.get(CAP_PROP_FRAME_WIDTH) / 2.0;
+
+	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << " @ " << cap.get(CAP_PROP_FPS) << " frames/second" << endl << endl;
 	if (DEBUG) cout << "Press any key to terminate\n" << endl;
 
 	// initialize variables for average FPS calculation
@@ -246,8 +265,14 @@ int main(int argc, char* argv[])
 		Mat grayscaleImage = applyGrayscale(frame, Scalar(bl, gl, rl), Scalar(bh, gh, rh));
 		imshow("Flag", grayscaleImage);
 
-		// apply contours
-		Mat contourImage = applyContours(grayscaleImage);
+		// contours
+		vector<Point> mainContour = getContour(grayscaleImage);
+		Point2f center = getContourCenter(mainContour);
+
+		Mat contourImage(grayscaleImage.size(), CV_8UC3, Scalar(0, 0, 0));
+		applyContourVisual(frame, mainContour, center);
+		applyContourVisual(contourImage, mainContour, center); // TODO: remove if necessary
+
 		imshow("Flag annotated", contourImage);
 
 		if (DEBUG) {
