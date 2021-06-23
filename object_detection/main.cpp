@@ -34,6 +34,7 @@ string keys =
 
 constexpr double FONT_SIZE = 0.3;
 constexpr int MAX_COLOR_VALUE = 255;
+constexpr double VARIANCE = 0.05; // % distance from middle vertical line
 
 vector<string> parseStringArgument(string targets, char delimiter=',')
 {
@@ -225,9 +226,12 @@ int main(int argc, char* argv[])
 	cap.set(CAP_PROP_FRAME_WIDTH, fw);
 	cap.set(CAP_PROP_FRAME_HEIGHT, fh);
 
-	const double middleCoordinateWidth = cap.get(CAP_PROP_FRAME_WIDTH) / 2.0;
+	const double frameWidth = cap.get(CAP_PROP_FRAME_WIDTH);
+	const double frameHeight = cap.get(CAP_PROP_FRAME_HEIGHT);
+	const double middleCoordinateWidth = frameWidth / 2.0;
 
-	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << " @ " << cap.get(CAP_PROP_FPS) << " frames/second" << endl << endl;
+	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << " @ " << cap.get(CAP_PROP_FPS) << " frames/second" << 
+		" @ " << frameWidth << "x" << frameHeight << endl << endl;
 	if (DEBUG) cout << "Press any key to terminate\n" << endl;
 
 	// initialize variables for average FPS calculation
@@ -268,6 +272,11 @@ int main(int argc, char* argv[])
 		// contours
 		vector<Point> mainContour = getContour(grayscaleImage);
 		Point2f center = getContourCenter(mainContour);
+
+		if (center.x >= middleCoordinateWidth - VARIANCE * frameWidth &&
+			center.x <= middleCoordinateWidth + VARIANCE * frameWidth) {
+			cout << "Point is in the middle: " << center.x << ", " << center.y << endl;
+		}
 
 		Mat contourImage(grayscaleImage.size(), CV_8UC3, Scalar(0, 0, 0));
 		applyContourVisual(frame, mainContour, center);
