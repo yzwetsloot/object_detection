@@ -167,6 +167,7 @@ QRDetector* getDetector(int id)
 
  void applyContourVisual(Mat& mat, vector<Point> contour, Point2f center)
  {
+	 if (contour.empty()) return;
 	 vector<vector<Point>> contours;
 	 contours.push_back(contour);
 	 drawContours(mat, contours, -1, Scalar(255,0,0));
@@ -231,7 +232,7 @@ int main(int argc, char* argv[])
 	const double middleCoordinateWidth = frameWidth / 2.0;
 
 	cout << "\nCamera is open\nStart grabbing frames @ " << getCurrentTimeString() << " @ " << cap.get(CAP_PROP_FPS) << " frames/second" << 
-		" @ " << frameWidth << "x" << frameHeight << endl << endl;
+		" with " << frameWidth << "x" << frameHeight << endl << endl;
 	if (DEBUG) cout << "Press any key to terminate\n" << endl;
 
 	// initialize variables for average FPS calculation
