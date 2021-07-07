@@ -247,7 +247,9 @@ int main(int argc, char* argv[])
 
 	for (;;)
 	{
-		if (EXEC_STATE == State::sleep) continue;
+	startLoop:
+		if (EXEC_STATE == State::sleep)
+			continue;
 
 		cap.read(frame);
 		if (frame.empty()) {
@@ -288,8 +290,9 @@ int main(int argc, char* argv[])
 					checkTargetName(targetNames, text);
 
 					if (targetNames.empty()) {
-						cout << "\nAll targets found. Exiting program..." << endl;
-						goto endLoop;
+						cout << "\nAll targets found. Entering sleep state..." << endl;
+						EXEC_STATE = State::sleep;
+						goto startLoop;
 					}
 				}
 			}
@@ -319,7 +322,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-endLoop:
 	if (DEBUG) destroyAllWindows();
 
 	return EXIT_SUCCESS;
